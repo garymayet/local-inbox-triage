@@ -1,0 +1,21 @@
+# TU configuracion con dominios/remitentes reales — NUNCA subir
+config.json
+
+# Estado local: aprendizaje, historial, decisiones, embeddings — datos privados
+.triage/
+*.log
+*.err
+
+# Python
+__pycache__/
+*.pyc
+venv/
+triage-venv/
+*-venv/
+.venv/
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

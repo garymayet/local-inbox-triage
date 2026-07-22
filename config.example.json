@@ -1,0 +1,25 @@
+{
+  "_comment": "Copia este archivo a config.json y editalo con TUS datos. config.json esta en .gitignore para que no subas informacion privada.",
+
+  "ollama_url": "http://localhost:11434",
+  "brain_model": "llama3.2:3b",
+  "embed_model": "bge-m3",
+
+  "client_domains": ["clientea.com", "clienteb.com.mx"],
+  "internal_domains": ["tuempresa.com"],
+  "sensitive_substrings": ["nombre.deltujefe", "rrhh", "recursoshumanos", "legal", "juridico"],
+
+  "blocked_folders": [
+    "deleted items", "elementos eliminados", "trash", "junk email", "correo no deseado",
+    "spambox", "unwanted", "outbox", "sent items", "elementos enviados", "drafts", "borradores", "sync issues"
+  ],
+
+  "bridge_folder": "TriageBridge",
+
+  "auto_min_confirmations": 3,
+  "sem_k": 5,
+  "sem_min_top": 0.72,
+  "sem_min_votes": 3,
+  "act_sim_top": 0.72,
+  "body_max": 4000
+}

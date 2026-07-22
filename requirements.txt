@@ -1,0 +1,3 @@
+# Instala en un venv de Python de WINDOWS (no WSL): py -m venv triage-venv
+pywin32>=306
+requests>=2.31
