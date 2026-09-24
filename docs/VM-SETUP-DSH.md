@@ -397,24 +397,41 @@ a nombre del SID de `mmayet`, la lanza y recoge la salida. Es el mecanismo para 
 Ojo: Python **bufferiza stdout** al redirigir a fichero, asi que el log aparece de golpe al
 terminar, no en tiempo real.
 
-## 7b. PENDIENTE (actualizado)
+## 7b. PENDIENTE (actualizado 24-sep-2026)
 
-1. **Sembrar el aprendizaje**: `--bootstrap --per-folder N` lee el historial ya archivado y crea
-   patrones + embeddings. Con 80 subcarpetas, `--per-folder 3` son ~240 correos (~15-25 min);
-   `30` son ~2400 (~2 h). Sin esto todo sale `[ASK]`.
-2. **Puente a Teams**: OneDrive y Power Automate ya estan configurados por el usuario. Falta
-   seguir `docs/POWER-AUTOMATE.md` y lanzar `triage_agent.py --bridge --batch 5`.
-3. **Que el pre-filtro de laya funcione de verdad**: `triage_laya.py` esta integrado pero `laya`
-   NO esta en el venv del agente (`triage-venv`), asi que la importacion falla y el agente cae
-   en silencio al LLM. Hay que instalarlo ahi.
-4. **Arranque automatico del bridge** al iniciar sesion (`triage-autostart.ps1` del repo). En
-   esta VM el Programador de Tareas SI funciona, a diferencia de lo que asume el SETUP.
-5. **Rellenar `client_domains`** en `config.json`. Las carpetas reales dan la pista de los
-   clientes: VALE, Ternium, JCI, Bimbo, Aeromexico, CODELCO, Transbank, Redbanc, Adient,
-   Profuturo, Aguas Andinas, Praa digital, APM.
-6. **Riesgo futuro a vigilar**: el **Outlook nuevo** puede volver a imponerse y romper el COM.
-   En una maquina corporativa eso no lo controlas tu. Si ocurre, la maquina limpia que
-   proponias pasa de idea a necesidad.
+Lo que YA esta hecho y verificado (no re-diagnosticar):
+
+- **Bootstrap**: rehecho con el buzon sincronizado. Medido: 80 carpetas, `--per-folder 30`,
+  **~390 correos sembrados** a **~11-14 correos/min** (solo embeddings, sin LLM) -> **~40-60
+  min**, no 2-4 h: la mayoria de carpetas tienen pocos correos.
+- **Puente a Teams**: **validado de punta a punta** (24-sep 09:57). Solicitud -> tarjeta ->
+  respuesta del usuario -> aplicada en Outlook y registrada en `decisions.jsonl`.
+  **La tarjeta llega al chat 1:1 con "Flow bot"**, no a un canal.
+- **Pre-filtro de laya**: `laya 0.3.11` SI esta en `triage-venv` y el pre-filtro funciona
+  (`tools/test-prefilter.py`: pre-filtra 1/8 casos, ninguno sensible). El punto 3 anterior
+  de esta lista estaba obsoleto.
+- **Arranque del bridge**: tarea `TriageBridge` con `ExecutionTimeLimit=PT0S`,
+  `LogonType=InteractiveToken` y disparador de inicio de sesion. Instalador idempotente:
+  `tools/install-triage-bridge-task.ps1`.
+- **`client_domains`**: relleno con lo que respalda el buzon (ver abajo).
+
+Queda:
+
+1. **Ampliar `client_domains`** en `config.json`. Medido con `tools/scan_client_domains.py`:
+   `kof.com` (49), `profuturo.com.mx` (32), `vale.com` (31), `nadro.com.mx` (28),
+   `aeromexico.com` (9), `davivienda.com` (5). **Faltan** los clientes cuyo correo no aparece
+   en el buzon reciente: Ternium, JCI, Bimbo, CODELCO, Transbank, Redbanc, Adient, Aguas
+   Andinas, Praa digital, APM, Citrosuco, COPA Airlines, Viva Aerobus, Bancoppel, Procafecol.
+   Pideselos al usuario: **no se adivinan**, porque es el gate de sensibilidad y un dominio de
+   menos deja que el agente archive solo correo de un cliente.
+2. **Conexion de Power Automate**: la credencial del conector **caduca**. Sintoma:
+   `Unauthorized / AuthorizationFailed: "A client certificate or authorization header was not
+   provided"` en el paso de Teams. Arreglo: *Conexiones* -> *Reparar conexion* -> reasignarla
+   en el paso -> **guardar** el flujo.
+3. **Riesgo futuro a vigilar**: el **Outlook nuevo** puede volver a imponerse y romper el COM.
+   Hoy `olk.exe` convive con el clasico y el COM responde (verificado con `--folders`). En una
+   maquina corporativa eso no lo controlas tu.
+
 
 ## 8. Notas de seguridad (leer)
 
