@@ -1,25 +1,53 @@
 {
   "_comment": "Copia este archivo a config.json y editalo con TUS datos. config.json esta en .gitignore para que no subas informacion privada.",
-
   "ollama_url": "http://localhost:11434",
   "brain_model": "llama3.2:3b",
   "embed_model": "bge-m3",
-
-  "client_domains": ["clientea.com", "clienteb.com.mx"],
-  "internal_domains": ["tuempresa.com"],
-  "sensitive_substrings": ["nombre.deltujefe", "rrhh", "recursoshumanos", "legal", "juridico"],
-
-  "blocked_folders": [
-    "deleted items", "elementos eliminados", "trash", "junk email", "correo no deseado",
-    "spambox", "unwanted", "outbox", "sent items", "elementos enviados", "drafts", "borradores", "sync issues"
+  "client_domains": [
+    "clientea.com",
+    "clienteb.com.mx"
   ],
-
+  "internal_domains": [
+    "tuempresa.com"
+  ],
+  "sensitive_substrings": [
+    "nombre.deltujefe",
+    "rrhh",
+    "recursoshumanos",
+    "legal",
+    "juridico"
+  ],
+  "blocked_folders": [
+    "deleted items",
+    "elementos eliminados",
+    "trash",
+    "junk email",
+    "correo no deseado",
+    "spambox",
+    "unwanted",
+    "outbox",
+    "sent items",
+    "elementos enviados",
+    "drafts",
+    "borradores",
+    "sync issues"
+  ],
   "bridge_folder": "TriageBridge",
-
   "auto_min_confirmations": 3,
   "sem_k": 5,
   "sem_min_top": 0.72,
   "sem_min_votes": 3,
   "act_sim_top": 0.72,
-  "body_max": 4000
+  "body_max": 4000,
+  "_prefiltro": "Pre-filtro local con laya (opcional). Si use_laya_prefilter=true y laya esta instalado, los correos que laya clasifique como newsletter/notification con confianza >= laya_min_confidence EVITAN la llamada al LLM. Los remitentes sensibles (client_domains / sensitive_substrings) NUNCA se pre-filtran.",
+  "use_laya_prefilter": false,
+  "laya_skip_categories": [
+    "newsletter",
+    "notification"
+  ],
+  "laya_min_confidence": 0.75,
+  "_timeouts": "Timeouts HTTP en segundos. Subelos si el modelo local es lento: en una VM de 2 vCPU un 3B-4B tarda 1-5 min por correo y el valor antiguo de 120 s provocaba ReadTimeout en TODOS los correos.",
+  "llm_timeout": 600,
+  "llm_timeout_draft": 900,
+  "embed_timeout": 180
 }

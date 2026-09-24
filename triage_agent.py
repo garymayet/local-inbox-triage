@@ -317,7 +317,7 @@ def ollama_classify(email, facts):
         hint.append("HECHO: remitente SENSIBLE (revision humana).")
     body = (" ".join(hint) + "\n" if hint else "")
     body += f"from: {email['from']}\nsubject: {email['subject']}\nbody: {email['body'][:1500]}"
-    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=120, json={
+    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=CFG.get("llm_timeout", 600), json={
         "model": BRAIN_MODEL, "temperature": 0.1, "stream": False,
         "response_format": {"type": "json_object"},
         "messages": [{"role": "system", "content": SYSTEM},
@@ -327,7 +327,7 @@ def ollama_classify(email, facts):
 
 
 def ollama_embed(text):
-    r = requests.post(f"{OLLAMA}/api/embed", timeout=90,
+    r = requests.post(f"{OLLAMA}/api/embed", timeout=CFG.get("embed_timeout", 180),
                       json={"model": EMBED_MODEL, "input": text[:2000]})
     r.raise_for_status()
     return r.json()["embeddings"][0]
@@ -336,6 +336,21 @@ def ollama_embed(text):
 # ---------------- Reglas + aprendizaje ----------------
 VALID_CATS = {"newsletter", "notification", "client_ops", "internal_team", "hr_admin",
               "finance", "vendor", "personal", "action_required", "ambiguous"}
+
+
+def classify(email, facts):
+    """Clasifica un correo: pre-filtro local (laya) si esta habilitado en config.json;
+    si no, el LLM. Si el pre-filtro falla por cualquier motivo, cae al LLM sin romper nada.
+    Ver docs/VM-SETUP-DSH.md (seccion del pre-filtro)."""
+    if CFG.get("use_laya_prefilter", False):
+        try:
+            import triage_laya
+            pre = triage_laya.prefilter(email, facts, CFG)
+            if pre:
+                return pre
+        except Exception:
+            pass
+    return ollama_classify(email, facts)
 
 
 def clean_cat(c):
@@ -546,7 +561,7 @@ def run_dry(limit):
     for i, e in enumerate(emails, 1):
         try:
             facts = domain_facts(e["from"])
-            cls = ollama_classify(e, facts)
+            cls = classify(e, facts)
             cat = clean_cat(cls.get("category"))
             vec = ollama_embed(f"{e['subject']} {e['body'][:800]}")
             d = decide(e, cls, facts, pats, vec)
@@ -687,7 +702,7 @@ def generate_draft(email, user_text=""):
                   f"Asunto: {email.get('subject','')}\nCuerpo:\n{email.get('body','')[:1500]}\n\n"
                   "Redacta SOLO el cuerpo de una respuesta profesional, breve y cordial, "
                   "en el MISMO idioma del correo. Sin firma final.")
-    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=180, json={
+    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=CFG.get("llm_timeout_draft", 900), json={
         "model": BRAIN_MODEL, "temperature": 0.3, "stream": False,
         "messages": [{"role": "user", "content": prompt}]})
     r.raise_for_status()
@@ -700,7 +715,7 @@ def generate_forward_note(email):
               "Escribe SOLO una nota breve y profesional (en espanol) para REENVIAR este correo "
               "al administrador o cliente responsable, resumiendo que accion se requiere de su parte. "
               "Sin firma final.")
-    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=180, json={
+    r = requests.post(f"{OLLAMA}/v1/chat/completions", timeout=CFG.get("llm_timeout_draft", 900), json={
         "model": BRAIN_MODEL, "temperature": 0.3, "stream": False,
         "messages": [{"role": "user", "content": prompt}]})
     r.raise_for_status()
@@ -910,7 +925,7 @@ def _bridge_tick(req_dir, dec_dir, batch):
             continue
         facts = domain_facts(e["from"])
         try:
-            cls = ollama_classify(e, facts)
+            cls = classify(e, facts)
         except Exception:
             cls = {}
         e["urg"] = cls.get("urgency")
