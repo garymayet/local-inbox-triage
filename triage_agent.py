@@ -177,21 +177,32 @@ def _dest_folders():
 
 def _find_by_path(path):
     """Resuelve una carpeta por ruta completa tipo 'Inbox/Clientes/ClienteA'.
-    Como arranca SIEMPRE en Inbox, es imposible mover un correo fuera del Inbox."""
-    parts = [p for p in path.split("/") if p]
-    segs = parts[1:] if parts and parts[0].lower() == "inbox" else parts
-    cur = _inbox
-    for seg in segs:
-        nxt = None
-        for f in cur.Folders:
-            if f.Name.lower() == seg.lower():
-                nxt = f
-                break
-        if not nxt:
-            return None
-        cur = nxt
-    return cur
+    Como arranca SIEMPRE en Inbox, es imposible mover un correo fuera del Inbox.
 
+    PATCH-FOLDER-PATH: hay carpetas cuyo NOMBRE contiene '/', p.ej.
+    'Inbox/CloudOps/VALE/KT AWS/Azure'. Partir la ruta por '/' y buscar segmento a
+    segmento NUNCA las encuentra: devolvia None en silencio, el bootstrap las daba por
+    vacias y mover ahi fallaba. En cada nivel se empareja el nombre MAS LARGO que encaje
+    como prefijo del resto de la ruta."""
+    parts = [p for p in path.split("/") if p]
+    rest = "/".join(parts[1:]) if parts and parts[0].lower() == "inbox" else "/".join(parts)
+    cur = _inbox
+    for _ in range(12):
+        if not rest:
+            return cur
+        mejor = None
+        for f in cur.Folders:
+            n = f.Name
+            if rest.lower() == n.lower() or rest.lower().startswith(n.lower() + "/"):
+                if mejor is None or len(n) > len(mejor.Name):
+                    mejor = f
+        if mejor is None:
+            return None
+        if rest.lower() == mejor.Name.lower():
+            return mejor
+        rest = rest[len(mejor.Name) + 1:]
+        cur = mejor
+    return None
 
 def _find_folder(name_lower):
     """Busca por nombre en TODO el arbol (primer match)."""
@@ -680,13 +691,17 @@ def _get_email(entry_id):
 
 
 def _in_inbox(entry_id):
-    # True solo si el correo sigue en el Inbox (no movido/borrado a mano)
+    """True solo si el correo sigue en el Inbox (no movido/borrado a mano).
+
+    PATCH-IN-INBOX: devuelve None si NO SE PUDO COMPROBAR (excepcion transitoria de COM:
+    Outlook ocupado, RPC_E_CALL_REJECTED, marshalling, sincronizacion). Antes cualquier
+    excepcion devolvia False y _bridge_tick lo leia como "el usuario ya lo movio", de modo
+    que CANCELABA TARJETAS VIVAS en silencio. Distinguir los dos casos es obligatorio."""
     try:
         it = _ns.GetItemFromID(entry_id)
         return it.Parent.EntryID == _inbox.EntryID
     except Exception:
-        return False
-
+        return None
 
 def generate_draft(email, user_text=""):
     if (user_text or "").strip():
@@ -900,7 +915,8 @@ def _bridge_tick(req_dir, dec_dir, batch):
     # 1b) reconciliar: soltar pendientes que el usuario ya movio/borro a mano en Outlook
     changed = False
     for c, m in list(pending.items()):
-        if not com(_in_inbox, m["entry_id"]):
+        # PATCH-IN-INBOX: solo reconciliar con certeza (None = no se pudo comprobar)
+        if com(_in_inbox, m["entry_id"]) is False:
             _rm(os.path.join(req_dir, m.get("reqfile", "")))
             seen.add(m["entry_id"])
             pending.pop(c, None)

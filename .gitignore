@@ -14,6 +14,10 @@ triage-venv/
 *-venv/
 .venv/
 
+# Copias de seguridad que dejan los parches idempotentes (tools/patch-*.py)
+*.bak
+*.bak-*
+
 # SO / editores
 .DS_Store
 Thumbs.db
