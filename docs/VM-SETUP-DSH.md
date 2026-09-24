@@ -380,6 +380,9 @@ Todas: DECISION [ASK] (sin patron conocido)
 | `patch-triage-agent.ps1` | Integrar el pre-filtro de laya | `classify()` + 2 puntos de llamada redirigidos, `py_compile` OK |
 | `patch-timeouts.ps1` | **Causa de que fallara todo**: `timeout=120` fijo, pero Gemma tarda 73 s de media y hasta 143 s en 1 core -> `ReadTimeout` en TODOS los correos | `llm_timeout=600`, `llm_timeout_draft=900`, `embed_timeout=180` |
 | shim actualizado | Su timeout interno (300 s) era MENOR que el del agente (600 s): se rendia antes y devolvia **502** | `CHAT_TIMEOUT=1800`, `EMBED_TIMEOUT=600` |
+| `patch-folder-path.py` | `_find_by_path` no resolvia carpetas cuyo NOMBRE lleva `/` (existe `Inbox/CloudOps/VALE/KT AWS/Azure`) y devolvia `None` en silencio: el bootstrap la daba por vacia y mover ahi fallaba | empareja el nombre MAS LARGO que encaje con la ruta. Verificado: **80/80 carpetas se resuelven** |
+| `patch-in-inbox.py` | `_in_inbox` devolvia `False` ante **cualquier** excepcion de COM y el bridge lo leia como "el usuario ya lo movio a mano" -> **borraba tarjetas vivas en silencio** | devuelve `None` si no pudo comprobarlo; la reconciliacion exige `is False` |
+| `patch-pending-save.py` | `save_pending()` se llamaba solo al **final** del ciclo (minutos por correo): la tarjeta se publicaba en Teams **antes** de que el agente registrara su `cid`, y responder en esa ventana hacia que **borrara la decision sin aplicarla** | persiste `pending.json` al crear cada pendiente |
 
 ### Rendimiento real (medido)
 

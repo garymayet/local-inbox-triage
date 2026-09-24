@@ -974,6 +974,10 @@ def _bridge_tick(req_dir, dec_dir, batch):
                        {"cid": cid, "subject": e["subject"], "from": e["from"], "card": card})
         pending[cid] = {"entry_id": eid, "from": e["from"], "dom": facts["domain"],
                         "vec": vec, "suggested": dcn.get("folder"), "reqfile": reqname}
+        # PATCH-PENDING-SAVE: guardar YA. Si el bridge muere (o el usuario responde)
+        # entre publicar la tarjeta y guardar pending.json, la tarjeta existe en Teams
+        # pero el agente no conoce el cid -> la respuesta se descartaria EN SILENCIO.
+        save_pending(pending)
         made += 1
     save_pending(pending)
     if made:
